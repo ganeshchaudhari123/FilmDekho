@@ -1,41 +1,65 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+const isProduction = process.env.NODE_ENV === 'production';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    if (process.env.NODE_ENV === 'development') {
-        console.warn('Supabase URL or Anon Key is missing. Check your .env.local file.');
+// Safety check for initialization
+if (!supabaseUrl || !supabaseAnonKey) {
+    if (isProduction) {
+        console.warn('CRITICAL: Supabase keys missing in production build.');
+    } else {
+        throw new Error('Supabase URL or Anon Key is missing. Check your .env link.');
     }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// In production, if keys are missing, we still need to provide strings to avoid crash
+export const supabase = createClient(
+    supabaseUrl || 'https://placeholder.supabase.co',
+    supabaseAnonKey || 'placeholder-key'
+);
 
 // Auth helpers
 export const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-    });
-    return { data, error };
+    try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+        return { data, error };
+    } catch (err: any) {
+        return { data: { user: null }, error: { message: err.message || 'Failed to fetch auth' } };
+    }
 };
 
 export const signUp = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-    });
-    return { data, error };
+    try {
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+        });
+        return { data, error };
+    } catch (err: any) {
+        return { data: { user: null }, error: { message: err.message || 'Failed to fetch auth' } };
+    }
 };
 
 export const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    try {
+        const { error } = await supabase.auth.signOut();
+        return { error };
+    } catch (err: any) {
+        return { error: { message: err.message || 'Failed to fetch signout' } };
+    }
 };
 
 export const getCurrentUser = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    return { user, error };
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        return { user, error };
+    } catch (err: any) {
+        return { user: null, error: { message: err.message || 'Failed to fetch user' } };
+    }
 };
 
 // Database queries
